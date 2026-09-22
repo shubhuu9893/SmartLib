@@ -1,0 +1,14 @@
+# Backend dependencies – FastAPI + Database + ML stack
+
+fastapi==0.110.0
+uvicorn[standard]==0.29.0          # ASGI server
+sqlalchemy==2.0.30                 # ORM
+psycopg2-binary==3.1.9             # PostgreSQL driver (Supabase)
+python-dotenv==1.0.1                # Load .env files
+pandas==2.2.2                      # Data manipulation for training
+scikit-learn==1.5.0                # TF‑IDF + cosine similarity
+joblib==1.4.2                       # Persist vectorizer & matrix
+
+# Optional – handy utilities (commented out, add if needed)
+# gunicorn==22.0.0                  # Production WSGI server
+# python-multipart==0.0.12          # File upload support
