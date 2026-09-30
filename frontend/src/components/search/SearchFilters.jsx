@@ -8,7 +8,7 @@ export const SEARCH_FIELDS = [
 
 export const SEARCH_SORTS = [
   { id: 'relevance', label: 'Most relevant' },
-  { id: 'rating', label: 'Highest rated' },
+  { id: 'rating', label: 'Top rated' },
   { id: 'new', label: 'Newest' },
   { id: 'old', label: 'Oldest' },
 ];

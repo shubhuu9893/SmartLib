@@ -51,6 +51,8 @@ def search_books(
 ):
     query = q.strip()
     result = _upstream(ol.search, query, field, page, limit, None if sort == "relevance" else sort)
+    if sort == "rating":
+        result["items"].sort(key=lambda d: d.get("ratings_average") or 0, reverse=True)
 
     if user is not None and page == 1:
         last = (
