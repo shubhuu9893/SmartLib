@@ -1,6 +1,7 @@
 import os
 
 import firebase_admin
+import google.auth.credentials
 from fastapi import Depends, Header, HTTPException, status
 from firebase_admin import auth as firebase_auth
 from sqlalchemy.orm import Session
@@ -9,6 +10,13 @@ from ..database.connection import get_db
 from ..database.models import User
 
 _app = None
+
+
+class _VerifyOnlyCredential(firebase_admin.credentials.Base):
+    """ID-token verification only needs Google's public certs, not a service account."""
+
+    def get_credential(self):
+        return google.auth.credentials.AnonymousCredentials()
 
 
 def _firebase_app():
@@ -25,7 +33,7 @@ def _firebase_app():
             detail="Firebase authentication is not configured on the server (set FIREBASE_PROJECT_ID)",
         )
 
-    credential = firebase_admin.credentials.Certificate(credentials_path) if credentials_path else None
+    credential = firebase_admin.credentials.Certificate(credentials_path) if credentials_path else _VerifyOnlyCredential()
     options = {"projectId": project_id} if project_id else None
     _app = firebase_admin.initialize_app(credential, options)
     return _app

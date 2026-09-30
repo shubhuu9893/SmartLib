@@ -2,7 +2,8 @@ import re
 from concurrent.futures import ThreadPoolExecutor
 
 from fastapi import HTTPException
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.dialects import postgresql, sqlite
+from sqlalchemy.exc import DBAPIError, IntegrityError
 from sqlalchemy.orm import Session
 
 from ..database.models import Book
@@ -10,6 +11,10 @@ from . import openlibrary as ol
 from .categories import category_for_subjects
 
 _pool = ThreadPoolExecutor(max_workers=8)
+
+
+def _is_unique_violation(exc: DBAPIError) -> bool:
+    return isinstance(exc, IntegrityError) or "UNIQUE constraint failed" in str(exc.orig)
 
 
 def is_work_ref(ref: str) -> bool:
@@ -102,15 +107,21 @@ def _apply_doc(book: Book, doc: dict, overwrite: bool = False):
             setattr(book, column, value)
 
 
+def _insert_missing_books(db: Session, docs: list[dict], keys: list[str]) -> None:
+    present = {k for (k,) in db.query(Book.ol_key).filter(Book.ol_key.in_(keys)).all()}
+    titles = {d["ol_key"]: (d.get("title") or "Untitled")[:255] for d in docs}
+    rows = [{"ol_key": k, "title": titles[k]} for k in keys if k not in present]
+    if not rows:
+        return
+    insert = postgresql.insert if db.get_bind().dialect.name == "postgresql" else sqlite.insert
+    db.execute(insert(Book).values(rows).on_conflict_do_nothing(index_elements=["ol_key"]))
+
+
 def _upsert_docs_once(db: Session, docs: list[dict], keys: list[str]) -> list[Book]:
+    _insert_missing_books(db, docs, keys)
     existing = {b.ol_key: b for b in db.query(Book).filter(Book.ol_key.in_(keys)).all()}
     for doc in docs:
-        book = existing.get(doc["ol_key"])
-        if book is None:
-            book = Book(ol_key=doc["ol_key"], title=(doc.get("title") or "Untitled")[:255])
-            db.add(book)
-            existing[doc["ol_key"]] = book
-        _apply_doc(book, doc)
+        _apply_doc(existing[doc["ol_key"]], doc)
     db.commit()
     return [existing[k] for k in keys]
 
@@ -122,8 +133,10 @@ def upsert_docs(db: Session, docs: list[dict]) -> list[Book]:
     keys = list(dict.fromkeys(d["ol_key"] for d in docs))
     try:
         return _upsert_docs_once(db, docs, keys)
-    except IntegrityError:
+    except DBAPIError as exc:
         db.rollback()
+        if not _is_unique_violation(exc):
+            raise
         return _upsert_docs_once(db, docs, keys)
 
 
@@ -208,9 +221,9 @@ def resolve_book(db: Session, ref: str, refresh: bool = False) -> Book:
         try:
             db.commit()
             break
-        except IntegrityError:
+        except DBAPIError as exc:
             db.rollback()
-            if attempt:
+            if attempt or not _is_unique_violation(exc):
                 raise
             book = db.query(Book).filter(Book.ol_key == ref).first()
     db.refresh(book)
