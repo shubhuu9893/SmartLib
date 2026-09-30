@@ -1,14 +1,25 @@
+"""Schemas for book recommendations."""
+
+from datetime import datetime
+from typing import Optional
+
 from pydantic import BaseModel
+from pydantic import ConfigDict
 
 
-class RecommendationItem(BaseModel):
-    id: int
-    title: str
-    author: str | None = None
-    category: str | None = None
-    similarity: float
-
-
-class RecommendationResponse(BaseModel):
+class RecommendationBase(BaseModel):
     book_id: int
-    recommendations: list[RecommendationItem]
+    score: float
+    reason: Optional[str] = None
+
+
+class RecommendationCreate(RecommendationBase):
+    pass
+
+
+class RecommendationOut(RecommendationBase):
+    id: int
+    user_id: int
+    generated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)

@@ -1,17 +1,66 @@
-# Backend dependencies – FastAPI + Database + ML stack
+# ============================================================
+# SmartLib Backend
+# FastAPI + Cloudflare D1 + Open Library + Recommendation ML
+# Python 3.12+
+# ============================================================
 
-fastapi==0.110.0
-uvicorn[standard]==0.29.0          # ASGI server
-sqlalchemy==2.0.30                 # ORM
-psycopg2-binary==2.9.9             # PostgreSQL driver (Supabase)
-python-dotenv==1.0.1                # Load .env files
-pandas==2.2.2                      # Data manipulation for training
-scikit-learn==1.5.0                # TF‑IDF + cosine similarity
-joblib==1.4.2                       # Persist vectorizer & matrix
-firebase-admin==7.7.0              # Verify Firebase ID tokens
-httpx==0.28.1                      # Open Library API client
-sqlalchemy-cloudflare-d1==0.4.0     # Cloudflare D1 (REST API) SQLAlchemy dialect
+# ------------------------------------------------------------
+# WEB API
+# ------------------------------------------------------------
+fastapi[standard]==0.117.1
+uvicorn[standard]==0.35.0
 
-# Optional – handy utilities (commented out, add if needed)
-# gunicorn==22.0.0                  # Production WSGI server
-# python-multipart==0.0.12          # File upload support
+
+# ------------------------------------------------------------
+# CONFIGURATION / ENVIRONMENT
+# ------------------------------------------------------------
+python-dotenv==1.2.3
+pydantic-settings==2.15.0
+
+# ----------------------------------------------------------------------------
+# FIREBASE
+# ----------------------------------------------------------------------------
+firebase-admin>=6.4.0
+
+
+# ------------------------------------------------------------
+# HTTP CLIENT
+# Cloudflare D1 REST API
+# Open Library API
+# ------------------------------------------------------------
+ httpx==0.28.1
+
+# ------------------------------------------------------------
+# DATABASE / ASYNC SQLALCHEMY
+# ------------------------------------------------------------
+sqlalchemy[asyncio]==2.0.30
+asyncpg==0.29.0
+
+
+# ------------------------------------------------------------
+# DATA PROCESSING
+# ------------------------------------------------------------
+numpy==2.5.3
+pandas==3.0.6
+
+
+# ------------------------------------------------------------
+# RECOMMENDATION ENGINE
+# TF-IDF
+# Cosine Similarity
+# ------------------------------------------------------------
+scikit-learn==1.9.1
+scipy==1.18.1
+joblib==1.6.0
+
+
+# ------------------------------------------------------------
+# PASSWORD SECURITY
+# ------------------------------------------------------------
+passlib[bcrypt]==1.7.4
+
+
+# ------------------------------------------------------------
+# TESTING
+# ------------------------------------------------------------
+pytest==8.4.2
