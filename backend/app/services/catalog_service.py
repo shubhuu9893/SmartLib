@@ -2,7 +2,7 @@ import re
 from concurrent.futures import ThreadPoolExecutor
 
 from fastapi import HTTPException
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import DBAPIError, IntegrityError
 from sqlalchemy.orm import Session
 
 from ..database.models import Book
@@ -10,6 +10,10 @@ from . import openlibrary as ol
 from .categories import category_for_subjects
 
 _pool = ThreadPoolExecutor(max_workers=8)
+
+
+def _is_unique_violation(exc: DBAPIError) -> bool:
+    return isinstance(exc, IntegrityError) or "UNIQUE constraint failed" in str(exc.orig)
 
 
 def is_work_ref(ref: str) -> bool:
@@ -122,8 +126,10 @@ def upsert_docs(db: Session, docs: list[dict]) -> list[Book]:
     keys = list(dict.fromkeys(d["ol_key"] for d in docs))
     try:
         return _upsert_docs_once(db, docs, keys)
-    except IntegrityError:
+    except DBAPIError as exc:
         db.rollback()
+        if not _is_unique_violation(exc):
+            raise
         return _upsert_docs_once(db, docs, keys)
 
 
@@ -208,9 +214,9 @@ def resolve_book(db: Session, ref: str, refresh: bool = False) -> Book:
         try:
             db.commit()
             break
-        except IntegrityError:
+        except DBAPIError as exc:
             db.rollback()
-            if attempt:
+            if attempt or not _is_unique_violation(exc):
                 raise
             book = db.query(Book).filter(Book.ol_key == ref).first()
     db.refresh(book)

@@ -1,3 +1,5 @@
+import json
+
 from sqlalchemy import (
     JSON,
     Boolean,
@@ -8,12 +10,29 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    TypeDecorator,
     UniqueConstraint,
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 from .connection import Base
+
+
+class JSONText(TypeDecorator):
+    """JSON stored as TEXT, for dialects without native JSON support (Cloudflare D1)."""
+
+    impl = Text
+    cache_ok = True
+
+    def process_bind_param(self, value, dialect):
+        return None if value is None else json.dumps(value)
+
+    def process_result_value(self, value, dialect):
+        return None if value is None else json.loads(value)
+
+
+PortableJSON = JSON().with_variant(JSONText(), "cloudflare_d1")
 
 
 class Book(Base):
@@ -80,7 +99,7 @@ class User(Base):
 
     bio = Column(Text)
 
-    preferences = Column(JSON, default=dict)
+    preferences = Column(PortableJSON, default=dict)
 
     onboarded = Column(Boolean, default=False, nullable=False)
 
@@ -116,7 +135,7 @@ class Favorite(Base):
 
     created_at = Column(DateTime, server_default=func.now())
 
-    book = relationship(Book)
+    book = relationship(Book, lazy="joined")
 
 
 class Rating(Base):
@@ -136,7 +155,7 @@ class Rating(Base):
 
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
-    book = relationship(Book)
+    book = relationship(Book, lazy="joined")
 
 
 class LibraryEntry(Base):
@@ -158,7 +177,7 @@ class LibraryEntry(Base):
 
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
-    book = relationship(Book)
+    book = relationship(Book, lazy="joined")
 
 
 class ReadingHistory(Base):
@@ -175,7 +194,7 @@ class ReadingHistory(Base):
 
     created_at = Column(DateTime, server_default=func.now(), index=True)
 
-    book = relationship(Book)
+    book = relationship(Book, lazy="joined")
 
 
 class SearchHistory(Base):

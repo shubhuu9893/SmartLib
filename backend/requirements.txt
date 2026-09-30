@@ -10,6 +10,7 @@ scikit-learn==1.5.0                # TF‑IDF + cosine similarity
 joblib==1.4.2                       # Persist vectorizer & matrix
 firebase-admin==7.7.0              # Verify Firebase ID tokens
 httpx==0.28.1                      # Open Library API client
+sqlalchemy-cloudflare-d1==0.4.0     # Cloudflare D1 (REST API) SQLAlchemy dialect
 
 # Optional – handy utilities (commented out, add if needed)
 # gunicorn==22.0.0                  # Production WSGI server
