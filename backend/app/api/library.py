@@ -82,14 +82,6 @@ def upsert_entry(
     return serialize_entry(entry)
 
 
-@router.delete("/{book_ref}")
-def delete_entry(book_ref: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    book = resolve_book(db, book_ref)
-    db.query(LibraryEntry).filter(LibraryEntry.user_id == user.id, LibraryEntry.book_id == book.id).delete()
-    db.commit()
-    return {"ok": True, "id": book.ol_key or str(book.id)}
-
-
 @router.get("/history")
 def list_history(limit: int = 50, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     rows = (
@@ -130,3 +122,11 @@ def clear_history(user: User = Depends(get_current_user), db: Session = Depends(
     db.query(ReadingHistory).filter(ReadingHistory.user_id == user.id).delete()
     db.commit()
     return {"ok": True}
+
+
+@router.delete("/{book_ref}")
+def delete_entry(book_ref: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    book = resolve_book(db, book_ref)
+    db.query(LibraryEntry).filter(LibraryEntry.user_id == user.id, LibraryEntry.book_id == book.id).delete()
+    db.commit()
+    return {"ok": True, "id": book.ol_key or str(book.id)}
