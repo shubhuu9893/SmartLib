@@ -33,7 +33,7 @@ export function normalizeBook(raw) {
     author: book.author || authors.map((a) => a.name).join(', ') || 'Unknown author',
     coverUrl: book.cover_url || book.coverUrl || null,
     category: book.category || book.subjects?.[0] || null,
-    subjects: book.subjects || [],
+    subjects: [...new Set(book.subjects || [])],
     description: book.description || '',
     year: book.first_publish_year || null,
     rating: typeof book.rating === 'number' ? book.rating : null,
