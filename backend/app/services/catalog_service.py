@@ -2,6 +2,7 @@ import re
 from concurrent.futures import ThreadPoolExecutor
 
 from fastapi import HTTPException
+from sqlalchemy.dialects import postgresql, sqlite
 from sqlalchemy.exc import DBAPIError, IntegrityError
 from sqlalchemy.orm import Session
 
@@ -106,15 +107,21 @@ def _apply_doc(book: Book, doc: dict, overwrite: bool = False):
             setattr(book, column, value)
 
 
+def _insert_missing_books(db: Session, docs: list[dict], keys: list[str]) -> None:
+    present = {k for (k,) in db.query(Book.ol_key).filter(Book.ol_key.in_(keys)).all()}
+    titles = {d["ol_key"]: (d.get("title") or "Untitled")[:255] for d in docs}
+    rows = [{"ol_key": k, "title": titles[k]} for k in keys if k not in present]
+    if not rows:
+        return
+    insert = postgresql.insert if db.get_bind().dialect.name == "postgresql" else sqlite.insert
+    db.execute(insert(Book).values(rows).on_conflict_do_nothing(index_elements=["ol_key"]))
+
+
 def _upsert_docs_once(db: Session, docs: list[dict], keys: list[str]) -> list[Book]:
+    _insert_missing_books(db, docs, keys)
     existing = {b.ol_key: b for b in db.query(Book).filter(Book.ol_key.in_(keys)).all()}
     for doc in docs:
-        book = existing.get(doc["ol_key"])
-        if book is None:
-            book = Book(ol_key=doc["ol_key"], title=(doc.get("title") or "Untitled")[:255])
-            db.add(book)
-            existing[doc["ol_key"]] = book
-        _apply_doc(book, doc)
+        _apply_doc(existing[doc["ol_key"]], doc)
     db.commit()
     return [existing[k] for k in keys]
 
