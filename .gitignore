@@ -1,8 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environments
+venv/
+.venv/
+env/
+.env/
+
+# Environment files
+*.env
+
+# IDE
+.vscode/
+.idea/
+
+# Node
 node_modules/
 dist/
-.venv/
-__pycache__/
-*.pyc
-frontend/.env
-frontend/.env.local
-*.log
+
+# OS
+.DS_Store
+Thumbs.db
