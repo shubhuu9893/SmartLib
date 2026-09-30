@@ -14,14 +14,15 @@ export function AppProvider({ children }) {
   const { profile } = useAuth();
   const toast = useToast();
   const [favoriteIds, setFavoriteIds] = useState(() => new Set());
+  const [favoritesLoaded, setFavoritesLoaded] = useState(false);
   const [ratings, setRatings] = useState(() => new Map());
   const [unreadCount, setUnreadCount] = useState(0);
-  const recsCache = useRef({ data: null, at: 0, promise: null, stale: false });
+  const recsCache = useRef({ data: null, at: 0, promise: null, gen: 0 });
   const [recsVersion, setRecsVersion] = useState(0);
   const userId = profile?.id;
 
   const invalidateRecommendations = useCallback(() => {
-    recsCache.current.stale = true;
+    recsCache.current = { ...recsCache.current, data: null, promise: null, gen: recsCache.current.gen + 1 };
     setRecsVersion((v) => v + 1);
   }, []);
 
@@ -37,13 +38,17 @@ export function AppProvider({ children }) {
   useEffect(() => {
     if (!userId) {
       setFavoriteIds(new Set());
+      setFavoritesLoaded(false);
       setRatings(new Map());
       setUnreadCount(0);
-      recsCache.current = { data: null, at: 0, promise: null, stale: false };
+      recsCache.current = { data: null, at: 0, promise: null, gen: recsCache.current.gen + 1 };
       return;
     }
     getFavoriteIds()
-      .then((ids) => setFavoriteIds(new Set(ids)))
+      .then((ids) => {
+        setFavoriteIds(new Set(ids));
+        setFavoritesLoaded(true);
+      })
       .catch(() => {});
     getRatings()
       .then((list) => setRatings(new Map(list.map((r) => [r.book.id, r.rating]))))
@@ -53,16 +58,17 @@ export function AppProvider({ children }) {
 
   const loadRecommendations = useCallback(async ({ force = false } = {}) => {
     const cache = recsCache.current;
-    const fresh = cache.data && !cache.stale && Date.now() - cache.at < RECS_TTL;
+    const fresh = cache.data && Date.now() - cache.at < RECS_TTL;
     if (!force && fresh) return cache.data;
     if (!force && cache.promise) return cache.promise;
+    const { gen } = cache;
     const promise = getRecommendations({ limit: 30 })
       .then((data) => {
-        recsCache.current = { data, at: Date.now(), promise: null, stale: false };
+        if (recsCache.current.gen === gen) recsCache.current = { data, at: Date.now(), promise: null, gen };
         return data;
       })
       .catch((error) => {
-        recsCache.current.promise = null;
+        if (recsCache.current.promise === promise) recsCache.current.promise = null;
         throw error;
       });
     recsCache.current.promise = promise;
@@ -138,6 +144,7 @@ export function AppProvider({ children }) {
       isFavorite,
       toggleFavorite,
       favoriteCount: favoriteIds.size,
+      favoritesLoaded,
       getRating,
       setRating,
       unreadCount,
@@ -147,7 +154,7 @@ export function AppProvider({ children }) {
       invalidateRecommendations,
       recsVersion,
     }),
-    [isFavorite, toggleFavorite, favoriteIds.size, getRating, setRating, unreadCount, refreshUnread, loadRecommendations, invalidateRecommendations, recsVersion],
+    [isFavorite, toggleFavorite, favoriteIds.size, favoritesLoaded, getRating, setRating, unreadCount, refreshUnread, loadRecommendations, invalidateRecommendations, recsVersion],
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

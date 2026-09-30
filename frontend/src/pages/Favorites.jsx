@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { BookOpen, Heart, HeartOff } from 'lucide-react';
 import PageHeader from '../components/common/PageHeader';
@@ -10,15 +9,10 @@ import { getFavorites } from '../api/favoritesApi';
 import { useApp } from '../context/AppContext';
 
 export default function Favorites() {
-  const { isFavorite, toggleFavorite, favoriteCount } = useApp();
+  const { isFavorite, toggleFavorite, favoritesLoaded } = useApp();
   const favorites = useAsync(getFavorites, []);
-  const { setData } = favorites;
-
-  useEffect(() => {
-    setData((list) => (list ? list.filter((b) => isFavorite(b.id)) : list));
-  }, [favoriteCount, isFavorite, setData]);
-
-  const items = favorites.data || [];
+  const loaded = favorites.data || [];
+  const items = favoritesLoaded ? loaded.filter((b) => isFavorite(b.id)) : loaded;
 
   return (
     <div>

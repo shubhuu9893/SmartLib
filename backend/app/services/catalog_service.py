@@ -2,6 +2,7 @@ import re
 from concurrent.futures import ThreadPoolExecutor
 
 from fastapi import HTTPException
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from ..database.models import Book
@@ -101,11 +102,7 @@ def _apply_doc(book: Book, doc: dict, overwrite: bool = False):
             setattr(book, column, value)
 
 
-def upsert_docs(db: Session, docs: list[dict]) -> list[Book]:
-    docs = [d for d in docs if d.get("ol_key")]
-    if not docs:
-        return []
-    keys = list(dict.fromkeys(d["ol_key"] for d in docs))
+def _upsert_docs_once(db: Session, docs: list[dict], keys: list[str]) -> list[Book]:
     existing = {b.ol_key: b for b in db.query(Book).filter(Book.ol_key.in_(keys)).all()}
     for doc in docs:
         book = existing.get(doc["ol_key"])
@@ -116,6 +113,18 @@ def upsert_docs(db: Session, docs: list[dict]) -> list[Book]:
         _apply_doc(book, doc)
     db.commit()
     return [existing[k] for k in keys]
+
+
+def upsert_docs(db: Session, docs: list[dict]) -> list[Book]:
+    docs = [d for d in docs if d.get("ol_key")]
+    if not docs:
+        return []
+    keys = list(dict.fromkeys(d["ol_key"] for d in docs))
+    try:
+        return _upsert_docs_once(db, docs, keys)
+    except IntegrityError:
+        db.rollback()
+        return _upsert_docs_once(db, docs, keys)
 
 
 def fetch_work_doc(work_id: str) -> dict | None:
@@ -189,13 +198,21 @@ def resolve_book(db: Session, ref: str, refresh: bool = False) -> Book:
             return book
         raise HTTPException(status_code=404, detail="Book not found")
 
-    if book is None:
-        book = Book(ol_key=ref, title=(doc.get("title") or "Untitled")[:255])
-        db.add(book)
-    _apply_doc(book, doc, overwrite=True)
-    if book.description is None:
-        book.description = ""
-    db.commit()
+    for attempt in range(2):
+        if book is None:
+            book = Book(ol_key=ref, title=(doc.get("title") or "Untitled")[:255])
+            db.add(book)
+        _apply_doc(book, doc, overwrite=True)
+        if book.description is None:
+            book.description = ""
+        try:
+            db.commit()
+            break
+        except IntegrityError:
+            db.rollback()
+            if attempt:
+                raise
+            book = db.query(Book).filter(Book.ol_key == ref).first()
     db.refresh(book)
     return book
 
