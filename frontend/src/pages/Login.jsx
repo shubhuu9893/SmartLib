@@ -6,6 +6,9 @@ import GoogleButton from '../components/auth/GoogleButton';
 import FirebaseNotice from '../components/auth/FirebaseNotice';
 import { authErrorMessage, useAuth } from '../context/AuthContext';
 
+const DEMO_EMAIL = import.meta.env.VITE_DEMO_EMAIL;
+const DEMO_PASSWORD = import.meta.env.VITE_DEMO_PASSWORD;
+
 export default function Login() {
   const { login, loginWithGoogle, isConfigured } = useAuth();
   const [email, setEmail] = useState('');
@@ -26,6 +29,19 @@ export default function Login() {
     }
   };
 
+  const signInDemo = async () => {
+    setEmail(DEMO_EMAIL);
+    setPassword(DEMO_PASSWORD);
+    setError('');
+    setBusy(true);
+    try {
+      await login(DEMO_EMAIL, DEMO_PASSWORD);
+    } catch (err) {
+      setError(authErrorMessage(err));
+      setBusy(false);
+    }
+  };
+
   const google = async () => {
     setError('');
     setBusy(true);
@@ -40,6 +56,19 @@ export default function Login() {
   return (
     <AuthLayout title="Welcome back" subtitle="Sign in to continue to your SmartLib library.">
       {!isConfigured && <FirebaseNotice />}
+      {DEMO_EMAIL && DEMO_PASSWORD && (
+        <div className="mb-5 rounded-xl border border-brand/30 bg-brand/10 p-4 text-sm">
+          <p className="font-semibold text-fg">Demo account</p>
+          <p className="mt-1 text-fg-muted">
+            Email: <span className="font-mono text-fg">{DEMO_EMAIL}</span>
+            <br />
+            Password: <span className="font-mono text-fg">{DEMO_PASSWORD}</span>
+          </p>
+          <button type="button" onClick={signInDemo} className="btn-gradient mt-3 w-full py-2" disabled={busy || !isConfigured}>
+            Use demo account
+          </button>
+        </div>
+      )}
       <form onSubmit={submit} className="space-y-4" noValidate>
         <div>
           <label htmlFor="email" className="label">Email</label>
