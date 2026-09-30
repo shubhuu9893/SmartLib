@@ -8,9 +8,19 @@ venv/
 .venv/
 env/
 .env/
+backend/venv/
 
 # Environment files
 *.env
+frontend/.env.local
+backend/.env
+backend/test.db
+firebase.txt
+.backend/.env
+
+# Local tooling and logs
+.wrangler/
+*.log
 
 # IDE
 .vscode/
@@ -19,6 +29,7 @@ env/
 # Node
 node_modules/
 dist/
+<<<<<<< Updated upstream
 
 # OS
 .DS_Store
