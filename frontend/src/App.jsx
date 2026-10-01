@@ -26,6 +26,7 @@ const AuthorDetails = lazy(() => import('./pages/AuthorDetails'));
 const Profile = lazy(() => import('./pages/Profile'));
 const Notifications = lazy(() => import('./pages/Notifications'));
 const Settings = lazy(() => import('./pages/Settings'));
+const Reader = lazy(() => import('./pages/Reader'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
 export default function App() {
@@ -40,6 +41,7 @@ export default function App() {
         </Route>
         <Route element={<ProtectedRoute />}>
           <Route path="/onboarding" element={<Onboarding />} />
+          <Route path="/reader/:bookId" element={<Reader />} />
           <Route element={<AppLayout />}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/explore" element={<Explore />} />

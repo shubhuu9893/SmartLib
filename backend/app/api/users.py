@@ -146,7 +146,16 @@ def get_recommendations(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    return personalized_recommendations(db, user, limit=max(1, min(limit, 60)))
+    from ..recommendation import get_recommender
+
+    recommender = get_recommender(db)
+    return personalized_recommendations(
+        recommender,
+        user=user,
+        db=db,
+        limit=max(1, min(limit, 60)),
+        as_dict=True,
+    )
 
 
 @router.get("/search-history")

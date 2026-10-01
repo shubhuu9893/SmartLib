@@ -8,6 +8,11 @@ development and for automated tests.
 from fastapi import APIRouter, Depends
 from typing import List, Dict
 
+# New imports for read endpoint
+from ..auth.firebase import get_current_user
+from ..services.catalog_service import resolve_book, availability
+from ..services.book_sources import openlibrary_get_pdf_url, gutenberg_get_pdf_url
+
 router = APIRouter()
 
 
